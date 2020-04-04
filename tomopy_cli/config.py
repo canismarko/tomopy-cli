@@ -4,6 +4,8 @@ import shutil
 import pathlib
 import argparse
 import configparser
+import inspect
+from functools import wraps
 import h5py
 import numpy as np
 
@@ -704,3 +706,79 @@ def update_config(args):
     if(args.dx_update):
         write_hdf(args, sections)       
 
+
+def with_params(func):
+    """A decorator allowing functions to accept a *Params* object.
+    
+    With this approach, a function can have its parameters laid out
+    explicitly in the call signature ("Explicit is better than
+    implicit.", PEP 20), and still be compatible with the global
+    configuration used by tomopy_cli::
+    
+        @config.with_params
+        def times_two(x):
+            return x*2
+        
+        # Call with explicit parameters
+        assert times_two(x=4) == 8
+        # Call with global *params* config
+        params.x = 4
+        assert times_two(params=params) == 8
+    
+    The decorator behaves slightly differently depending on whether
+    the *params* object is also listed in the function's
+    parameters. If a *params* argument is found in the target
+    function's call signature, any other missing arguments will be
+    taken from params, which can be given as both a positional or
+    keyword argument. If no *params* argument is found on the
+    decorated function, the *params* object must be passed in as a
+    keyword argument.
+    
+    In all cases, an argument given directly will override anything in
+    the *params* object. For example::
+    
+        @config.with_params
+        def times_two(x, params):
+            return x*2
+        
+        params.x = 4
+        # Using only *params* will use the indirect argument
+        assert times_two(params=params) == 8
+        # Direct argument overrides *params*
+        assert times_two(x=5, params=params) == 10
+        
+    Parameters
+    ==========
+    func : callable
+      The target function to be decorated.
+    
+    Returns
+    =======
+    wrapped : callable
+      A wrapper that unpacks the *params* argument and then calls the
+      target function
+    
+    """
+    params_param = 'params'
+    signature = inspect.signature(func)
+    will_forward_params = params_param in signature.parameters
+    # Prepare a wrapper function to parse arguments then call the target function
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        # Get the provided Params object
+        if not will_forward_params:
+            # Remove *params* from kwargs if not getting passed on
+            params = kwargs.pop(params_param, None)
+        parsed_arguments = signature.bind_partial(*args, **kwargs).arguments
+        if will_forward_params:
+            # Get parsed parameters from the passed arguments
+            params = parsed_arguments[params_param]
+        # Try and get any missing arguments from the params object
+        for param in signature.parameters:
+            if param not in parsed_arguments:
+                # Argument was not passed in, so get it from *params*
+                kwargs[param] = getattr(params, param)
+        # Call the target function with the parsed parameters
+        return func(*args, **kwargs)
+    # Transfer the doc string to the wrapped function so help works right
+    return wrapped
