@@ -772,12 +772,13 @@ def with_params(func):
         parsed_arguments = signature.bind_partial(*args, **kwargs).arguments
         if will_forward_params:
             # Get parsed parameters from the passed arguments
-            params = parsed_arguments[params_param]
+            params = parsed_arguments.get(params_param, None)
         # Try and get any missing arguments from the params object
-        for param in signature.parameters:
-            if param not in parsed_arguments:
-                # Argument was not passed in, so get it from *params*
-                kwargs[param] = getattr(params, param)
+        if params is not None:
+            for param in signature.parameters:
+                if param not in parsed_arguments:
+                    # Argument was not passed in, so get it from *params*
+                    kwargs[param] = getattr(params, param)
         # Call the target function with the parsed parameters
         return func(*args, **kwargs)
     # Transfer the doc string to the wrapped function so help works right

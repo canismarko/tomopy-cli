@@ -25,6 +25,17 @@ class WithParamsDecoratorTests(unittest.TestCase):
         self.assertEqual(decorated(4), 8)
         self.assertEqual(decorated(x=4), 8)
     
+    def test_optional_params(self):
+        """Any function decorated this way *should* work normally too."""
+        # Prepare a test function and then decorate it
+        def times_two(x, params=None):
+            """Multiple x by two."""
+            return x*2
+        decorated = config.with_params(times_two)
+        # Call the decorated function and test the result
+        self.assertEqual(decorated(4), 8)
+        self.assertEqual(decorated(x=4), 8)
+        
     def test_params_by_keyword(self):
         """Passing in *params* should work just fine."""
         # Prepare a test function and then decorate it

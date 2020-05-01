@@ -101,25 +101,43 @@ def blocked_view(proj, theta, params):
     return proj, theta
 
 
-def binning(proj, flat, dark, params):
-
+@config.with_params
+def binning(proj, flat, dark, binning=0):
+    """Downsample tomography projections images.
+    
+    Parameters
+    ==========
+    proj : np.ndarray
+      3D projections in order (angle, row, col)
+    flat : np.ndarray
+      3D flat field images in order (num, row, col)
+    dark : np.ndarray
+      3D dark field images in order (num, row, col)
+    binning : int, optional
+      Level of downsampling as power(2, choice)
+    
+    Returns
+    =======
+    proj, flat, dark
+      Arrays downsampled by 2**binning along axes (1, 2)
+    
+    """
     log.info("  *** binning")
-    if(params.binning == 0):
+    if(binning == 0):
         log.info('  *** *** OFF')
     else:
         log.warning('  *** *** ON')
-        log.warning('  *** *** binning: %d' % params.binning)
-        proj = _binning(proj, params)
-        flat = _binning(flat, params)
-        dark = _binning(dark, params)
-
+        log.warning('  *** *** binning: %d' % binning)
+        proj = _binning(proj, binning)
+        flat = _binning(flat, binning)
+        dark = _binning(dark, binning)
     return proj, flat, dark
 
-def _binning(data, params):
 
-    data = tomopy.downsample(data, level=int(params.binning), axis=2) 
-    data = tomopy.downsample(data, level=int(params.binning), axis=1)
-
+@config.with_params
+def _binning(data, binning=0):
+    data = tomopy.downsample(data, level=int(binning), axis=2) 
+    data = tomopy.downsample(data, level=int(binning), axis=1)
     return data
 
 

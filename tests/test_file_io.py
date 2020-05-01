@@ -10,6 +10,30 @@ import matplotlib.pyplot as plt
 
 from tomopy_cli import file_io
 
+
+class BinningTests(unittest.TestCase):
+    def test_private_binning(self):
+        data = np.empty((12, 16, 16))
+        output = file_io._binning(data, binning=1)
+        self.assertEqual(output.shape, (12, 8, 8))
+        # Verify that it works with the *params* argument
+        params = mock.MagicMock(binning=2)
+        output = file_io._binning(data, params=params)
+        self.assertEqual(output.shape, (12, 4, 4))
+    
+    def test_public_binning(self):
+        prj = np.full((12, 16, 16), 0.3)
+        flat = np.ones((5, 16, 16))
+        dark = np.zeros((2, 16, 16))
+        prj2, flat2, dark2 = file_io.binning(prj, flat, dark, binning=1)
+        self.assertEqual(flat2.shape, (5, 8, 8))
+        # Verify that it works with the *params* argument
+        params = mock.MagicMock(binning=2)
+        params.binning = 2
+        prj3, flat3, dark3 = file_io.binning(prj, flat, dark, params=params)
+        self.assertEqual(prj3.shape, (12, 4, 4))
+
+
 class FlipAndStitchTests(unittest.TestCase):
     def test_tomogram_360(self):
         # Prepare mocked config parameters
